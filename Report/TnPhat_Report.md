@@ -1,3 +1,5 @@
+# Báo cáo Lab 01 – Phần của Tấn Phát (sleep, pingpong, primes)
+
 ## 1. sleep
 
 **Giải pháp**
@@ -15,6 +17,10 @@
 
 **Yêu cầu chưa thực hiện đầy đủ**
 - Không có.
+
+**Minh chứng**
+
+![sleep](sleep.png)
 
 ## 2. pingpong
 
@@ -34,6 +40,10 @@
 
 **Yêu cầu chưa thực hiện đầy đủ**
 - Không có. Đã chạy 3 lần liên tiếp, lần nào cũng đúng thứ tự.
+
+**Minh chứng**
+
+![pingpong](pingpong.png)
 
 ## 3. primes
 
@@ -56,9 +66,13 @@
 **Yêu cầu chưa thực hiện đầy đủ**
 - Không có. In đủ từ prime 2 đến prime 277; chạy 3 lần liên tiếp trong cùng phiên không treo.
 
+**Minh chứng**
+
+![primes](primes.png)
+
 ## Kết quả kiểm tra
 
-make grade: sleep ok, pingpong ok, primes ok
+make grade: sleep OK, pingpong OK, primes OK.
 
 ## Tài liệu tham khảo
 
