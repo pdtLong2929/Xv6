@@ -58,7 +58,7 @@
 
 ## Kết quả kiểm tra
 
-make grade: sleep …, pingpong …, primes … (điền theo kết quả thực tế, kèm ảnh chụp).
+make grade: sleep ok, pingpong ok, primes ok
 
 ## Tài liệu tham khảo
 
