@@ -1,0 +1,161 @@
+diff --git a/Makefile b/Makefile
+index 74e454f..d4547ed 100644
+--- a/Makefile
++++ b/Makefile
+@@ -194,6 +194,9 @@ UPROGS=\
+ 	$U/_grind\
+ 	$U/_wc\
+ 	$U/_zombie\
++	$U/_sleep\
++	$U/_pingpong\
++	$U/_primes\
+ 
+ 
+ 
+diff --git a/user/pingpong.c b/user/pingpong.c
+new file mode 100644
+index 0000000..3ff9765
+--- /dev/null
++++ b/user/pingpong.c
+@@ -0,0 +1,50 @@
++#include "kernel/types.h"
++#include "user/user.h"
++
++int
++main(int argc, char *argv[])
++{
++  int p2c[2], c2p[2];   // p2c: cha -> con, c2p: con -> cha
++  char b;
++
++  if(pipe(p2c) < 0 || pipe(c2p) < 0){
++    fprintf(2, "pingpong: pipe failed\n");
++    exit(1);
++  }
++
++  int pid = fork();
++  if(pid < 0){
++    fprintf(2, "pingpong: fork failed\n");
++    exit(1);
++  }
++
++  if(pid == 0){
++    // tien trinh con
++    close(p2c[1]);
++    close(c2p[0]);
++    if(read(p2c[0], &b, 1) != 1){
++      fprintf(2, "pingpong: child read failed\n");
++      exit(1);
++    }
++    printf("%d: received ping\n", getpid());
++    write(c2p[1], &b, 1);
++    close(p2c[0]);
++    close(c2p[1]);
++    exit(0);
++  }
++
++  // tien trinh cha
++  close(p2c[0]);
++  close(c2p[1]);
++  b = 'x';
++  write(p2c[1], &b, 1);
++  if(read(c2p[0], &b, 1) != 1){
++    fprintf(2, "pingpong: parent read failed\n");
++    exit(1);
++  }
++  printf("%d: received pong\n", getpid());
++  close(p2c[1]);
++  close(c2p[0]);
++  wait(0);
++  exit(0);
++}
+\ No newline at end of file
+diff --git a/user/primes.c b/user/primes.c
+new file mode 100644
+index 0000000..690c058
+--- /dev/null
++++ b/user/primes.c
+@@ -0,0 +1,63 @@
++#include "kernel/types.h"
++#include "user/user.h"
++
++void primes(int left) __attribute__((noreturn));
++
++// Doc so tu pipe ben trai, in so dau tien (la so nguyen to),
++// chuyen cac so khong chia het sang tien trinh ke tiep.
++void
++primes(int left)
++{
++  int p, n;
++
++  if(read(left, &p, sizeof(p)) != sizeof(p)){
++    close(left);          // pipe rong: het day so
++    exit(0);
++  }
++  printf("prime %d\n", p);
++
++  int right[2];
++  int started = 0;        // da tao tien trinh ke tiep chua
++
++  while(read(left, &n, sizeof(n)) == sizeof(n)){
++    if(n % p == 0)
++      continue;
++    if(!started){
++      pipe(right);
++      if(fork() == 0){
++        close(right[1]);  // con chi doc tu right[0]
++        close(left);      // con khong can pipe ben trai cua cha
++        primes(right[0]);
++      }
++      close(right[0]);    // cha chi ghi vao right[1]
++      started = 1;
++    }
++    write(right[1], &n, sizeof(n));
++  }
++
++  close(left);
++  if(started){
++    close(right[1]);      // bao EOF cho tien trinh ke tiep
++    wait(0);
++  }
++  exit(0);
++}
++
++int
++main(int argc, char *argv[])
++{
++  int p[2];
++  pipe(p);
++
++  if(fork() == 0){
++    close(p[1]);
++    primes(p[0]);
++  }
++
++  close(p[0]);
++  for(int i = 2; i <= 280; i++)
++    write(p[1], &i, sizeof(i));
++  close(p[1]);            // bao het so cho tien trinh loc dau tien
++  wait(0);
++  exit(0);
++}
+\ No newline at end of file
+diff --git a/user/sleep.c b/user/sleep.c
+new file mode 100644
+index 0000000..bd7c580
+--- /dev/null
++++ b/user/sleep.c
+@@ -0,0 +1,13 @@
++#include "kernel/types.h"
++#include "user/user.h"
++
++int
++main(int argc, char *argv[])
++{
++  if(argc < 2){
++    fprintf(2, "Usage: sleep ticks\n");
++    exit(1);
++  }
++  sleep(atoi(argv[1]));
++  exit(0);
++}
+\ No newline at end of file
