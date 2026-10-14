@@ -1,0 +1,82 @@
+# Báo cáo Lab 01 – Phần của Tấn Phát (sleep, pingpong, primes)
+
+## 1. sleep
+
+**Giải pháp**
+- Kiểm tra có đúng một đối số; thiếu thì in "Usage: sleep ticks" ra stderr và exit(1).
+- Kiểm tra đối số chỉ gồm chữ số, vì atoi("abc") trả về 0 mà không báo lỗi; sai thì in "sleep: invalid number" và exit(1).
+- Đổi chuỗi sang số bằng atoi, gọi system call sleep, kết thúc bằng exit(0).
+- Cơ chế: đối số không đọc từ bàn phím mà do shell tách dòng lệnh và kernel (exec) đặt sẵn vào argc/argv. Lời gọi sleep đi qua stub trong user/usys.S (đặt số hiệu vào thanh ghi a7, lệnh ecall) vào sys_sleep của kernel; tiến trình ngủ đến khi biến ticks tăng đủ (1 tick khoảng 0,1 giây trên QEMU).
+
+**Khó khăn gặp phải**
+- Ban đầu chưa cài toolchain RISC-V nên make qemu báo lỗi "Couldn't find a riscv64 version of GCC"; đã cài gcc-riscv64-linux-gnu và qemu-system-misc.
+- Gặp lỗi "No rule to make target user/_sleeptest" do UPROGS còn tên chương trình ví dụ nhưng không có file .c tương ứng; đã đồng bộ lại UPROGS.
+
+**Cách đã thử không thành công**
+- Gõ make và sleep bên trong shell xv6 nên nhận "exec make failed", "exec sleep failed". Nguyên nhân là nhầm giữa terminal Linux (nơi build) và shell xv6 (nơi chạy thử), cùng với việc chương trình chưa được đưa vào fs.img.
+
+**Yêu cầu chưa thực hiện đầy đủ**
+- Không có.
+
+**Minh chứng**
+
+![sleep](sleep.png)
+
+## 2. pingpong
+
+**Giải pháp**
+- Dùng 2 pipe vì pipe chỉ truyền một chiều: p2c (cha sang con) và c2p (con sang cha). Dùng chung 1 pipe thì cha có thể đọc lại chính byte mình vừa ghi.
+- Tạo pipe trước fork() để cả hai tiến trình có đủ 4 file descriptor; sau fork, mỗi bên đóng ngay đầu ống không dùng.
+- Cha gửi 1 byte; con đọc, in "<pid>: received ping", gửi trả; cha đọc, in "<pid>: received pong", wait(0) để thu dọn con rồi exit(0).
+- Thứ tự ping trước pong được bảo đảm nhờ read trên pipe rỗng bị chặn (block), không cần sleep.
+- Kiểm tra giá trị trả về của pipe, fork, read, write; lỗi thì báo ra stderr và exit(1).
+
+**Khó khăn gặp phải**
+- Hiểu đúng giá trị trả về của fork (0 ở con, PID của con ở cha) và việc cả hai tiến trình cùng chạy tiếp sau fork.
+- Xác định PID trong output: ping mang PID của con, pong mang PID của cha (ví dụ 4 và 3, vì PID 1 là init, 2 là sh).
+
+**Cách đã thử không thành công**
+- Không có.
+
+**Yêu cầu chưa thực hiện đầy đủ**
+- Không có. Đã chạy 3 lần liên tiếp, lần nào cũng đúng thứ tự.
+
+**Minh chứng**
+
+![pingpong](pingpong.png)
+
+## 3. primes
+
+**Giải pháp**
+- Sàng song song theo ý tưởng Doug McIlroy: main ghi các số 2 đến 280 vào pipe; mỗi tiến trình lọc đọc số đầu tiên p (chắc chắn là số nguyên tố) và in ra, chuyển các số không chia hết cho p sang pipe bên phải.
+- Khi read trả 0 (pipe trái đã hết), tiến trình đóng đầu ghi pipe phải để tiến trình sau cũng nhận EOF, wait con rồi exit.
+- Truyền số dạng int 4 byte thay vì chuỗi ASCII để mỗi lần read được đúng một số.
+- Chỉ tạo pipe và fork khi có số đầu tiên cần chuyển đi: có 59 số nguyên tố không quá 280, chuỗi tiến trình sát giới hạn 64 tiến trình (NPROC) của xv6.
+- Mỗi tầng wait con của nó, nên main chỉ thoát khi cả chuỗi đã in xong và dấu $ không chen giữa output.
+- Khai báo hàm primes là noreturn để tránh lỗi biên dịch đệ quy vô hạn; mỗi lần gọi primes nằm trong một tiến trình mới nên không tràn stack.
+- Kiểm tra lỗi pipe, fork, write vì fork có thể thất bại khi gần chạm giới hạn tiến trình.
+
+**Khó khăn gặp phải**
+- Quản lý file descriptor: read chỉ trả 0 khi mọi đầu ghi của pipe đã đóng, kể cả bản sao mà tiến trình con thừa hưởng sau fork. Quên đóng sẽ làm chương trình treo; ngoài ra mỗi tiến trình chỉ có 16 FD (NOFILE).
+- Giới hạn 64 tiến trình buộc phải chỉ fork khi thật sự cần.
+
+**Cách đã thử không thành công**
+- … (bổ sung nếu có, ví dụ phiên bản quên đóng FD bị treo)
+
+**Yêu cầu chưa thực hiện đầy đủ**
+- Không có. In đủ từ prime 2 đến prime 277; chạy 3 lần liên tiếp trong cùng phiên không treo.
+
+**Minh chứng**
+
+![primes](primes.png)
+
+## Kết quả kiểm tra
+
+make grade: sleep OK, pingpong OK, primes OK.
+
+## Tài liệu tham khảo
+
+1. R. Cox, F. Kaashoek, R. Morris. xv6: a simple, Unix-like teaching operating system (RISC-V, rev4), 2024. Chương 1; mục 4.3–4.4; mục 7.7.
+2. MIT 6.1810 Fall 2024. Lab: Xv6 and Unix utilities. https://pdos.csail.mit.edu/6.1810/2024/labs/util.html
+3. Lê Viết Long. Hướng dẫn thực hành XV6, môn Hệ điều hành.
+4. Mã nguồn xv6-labs-2024: user/sh.c, kernel/exec.c, kernel/syscall.c, kernel/sysproc.c, kernel/pipe.c.
