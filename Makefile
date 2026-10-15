@@ -194,8 +194,8 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
-
-
+	$U/_du\
+	$U/_diff
 
 
 ifeq ($(LAB),syscall)
@@ -212,7 +212,7 @@ endif
 
 ifeq ($(LAB),traps)
 UPROGS += \
-	$U/_call\
+	 $U/_call\
 	$U/_bttest
 endif
 
