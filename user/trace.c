@@ -14,14 +14,16 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  if (trace(atoi(argv[1])) < 0) {
+  if(trace(atoi(argv[1])) < 0){
     fprintf(2, "%s: trace failed\n", argv[0]);
     exit(1);
   }
-  
-  for(i = 2; i < argc && i < MAXARG; i++){
+
+  for(i = 2; i < argc && i < MAXARG; i++)
     nargv[i-2] = argv[i];
-  }
+  nargv[i-2] = 0;
+
   exec(nargv[0], nargv);
-  exit(0);
+  fprintf(2, "trace: exec %s failed\n", nargv[0]);
+  exit(1);
 }
