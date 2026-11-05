@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "ptree.h"
 
 struct cpu cpus[NCPU];
 
@@ -693,3 +694,56 @@ procdump(void)
     printf("\n");
   }
 }
+
+// Copy process table information to user space buffer
+int
+copy_ptree(uint64 ubuf, int max)
+{
+  struct proc *p;
+  struct ptreeinfo info;
+  int count = 0;
+  int active = 0;
+
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if(p->state != UNUSED)
+      active++;
+    release(&p->lock);
+  }
+
+  if(active > max)
+    return -1;
+
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&wait_lock);
+    acquire(&p->lock);
+
+    if(p->state != UNUSED) {
+      info.pid = p->pid;
+      info.state = p->state;
+      info.memsize = p->sz;
+      safestrcpy(info.name, p->name, sizeof(info.name));
+
+      if(p->parent) {
+        info.ppid = p->parent->pid;
+      } else {
+        info.ppid = 0;
+      }
+
+      release(&p->lock);
+      release(&wait_lock);
+
+      uint64 dst = ubuf + (uint64)count * sizeof(struct ptreeinfo);
+      if(copyout(myproc()->pagetable, dst, (char *)&info, sizeof(struct ptreeinfo)) < 0) {
+        return -1;
+      }
+      count++;
+    } else {
+      release(&p->lock);
+      release(&wait_lock);
+    }
+  }
+
+  return count;
+}
+

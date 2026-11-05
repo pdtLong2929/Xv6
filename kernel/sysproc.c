@@ -91,3 +91,19 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_ptree(void)
+{
+  uint64 ubuf;
+  int max;
+
+  argaddr(0, &ubuf);
+  argint(1, &max);
+
+  if(max <= 0 || ubuf == 0)
+    return -1;
+
+  return copy_ptree(ubuf, max);
+}
+
