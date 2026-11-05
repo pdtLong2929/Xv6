@@ -1,4 +1,6 @@
 struct stat;
+struct sysinfo;
+struct ptreeinfo;
 
 // system calls
 int fork(void);
@@ -22,6 +24,9 @@ int getpid(void);
 char *sbrk(int);
 int sleep(int);
 int uptime(void);
+int trace(int);
+int sysinfo(struct sysinfo *);
+int ptree(struct ptreeinfo *, int);
 
 // ulib.c
 int stat(const char *, struct stat *);
@@ -41,6 +46,3 @@ void *memcpy(void *, const void *, uint);
 // umalloc.c
 void *malloc(uint);
 void free(void *);
-
-struct ptreeinfo;
-int ptree(struct ptreeinfo *, int);
