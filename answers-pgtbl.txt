@@ -1,0 +1,14 @@
+== Bai 1: Speed up system calls ==
+Cau hoi: Nhung system call nao khac trong xv6 co the duoc tang toc bang trang chia se USYSCALL?
+
+Tra loi:
+Trang USYSCALL chi cho user doc, nen chi tang toc duoc cac system call chi DOC thong tin
+cua kernel ma khong thay doi trang thai he thong:
+- uptime(): kernel ghi bien ticks vao trang chia se moi lan ngat timer, user doc truc tiep
+  (giong vDSO clock_gettime/gettimeofday cua Linux). Nen dung mot trang chung map vao
+  moi tien trinh thay vi cap nhat tung trang rieng.
+- getppid() (neu bo sung): luu PID cua tien trinh cha; kernel phai cap nhat trong reparent()
+  khi cha thoat.
+- sbrk(0) (doc p->sz): kernel cap nhat moi khi growproc()/exec() thay doi sz.
+Cac system call thay doi trang thai (fork, exec, write, kill, sbrk(n) voi n != 0) khong the
+tang toc theo cach nay vi can kernel thuc hien voi dac quyen.
