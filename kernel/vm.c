@@ -279,6 +279,32 @@ freewalk(pagetable_t pagetable)
   kfree((void *)pagetable);
 }
 
+void
+vmprint_recursive(pagetable_t pagetable, int depth)
+{
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if((pte & PTE_V) == 0)
+      continue;
+    for(int d = 0; d <= depth; d++){
+      printk("..");
+      if(d < depth)
+        printk(" ");
+    }
+    printk("%d: pte %p pa %p\n", i, (void*)pte, (void*)PTE2PA(pte));
+    if((pte & (PTE_R|PTE_W|PTE_X)) == 0){
+      vmprint_recursive((pagetable_t)PTE2PA(pte), depth + 1);
+    }
+  }
+}
+
+void
+vmprint(pagetable_t pagetable)
+{
+  printk("page table %p\n", pagetable);
+  vmprint_recursive(pagetable, 0);
+}
+
 // Free user memory pages,
 // then free page-table pages.
 void

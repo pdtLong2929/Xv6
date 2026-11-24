@@ -1,0 +1,62 @@
+diff --git a/kernel/defs.h b/kernel/defs.h
+index 0ae6896..753aa52 100644
+--- a/kernel/defs.h
++++ b/kernel/defs.h
+@@ -162,6 +162,7 @@ uint64          uvmdealloc(pagetable_t, uint64, uint64);
+ int             uvmcopy(pagetable_t, pagetable_t, uint64);
+ void            uvmfree(pagetable_t, uint64);
+ void            uvmunmap(pagetable_t, uint64, uint64, int);
++void            vmprint(pagetable_t);
+ void            uvmclear(pagetable_t, uint64);
+ pte_t *         walk(pagetable_t, uint64, int);
+ uint64          walkaddr(pagetable_t, uint64);
+diff --git a/kernel/exec.c b/kernel/exec.c
+index 8c9673f..3fe4bba 100644
+--- a/kernel/exec.c
++++ b/kernel/exec.c
+@@ -137,6 +137,8 @@ kexec(char *path, char **argv)
+   p->trapframe->sp = sp;         // initial stack pointer
+   proc_freepagetable(oldpagetable, oldsz);
+ 
++  if(p->pid == 1)
++    vmprint(p->pagetable);
+   return argc; // this ends up in a0, the first argument to main(argc, argv)
+ 
+ bad:
+diff --git a/kernel/vm.c b/kernel/vm.c
+index f50650b..c5ac39b 100644
+--- a/kernel/vm.c
++++ b/kernel/vm.c
+@@ -279,6 +279,32 @@ freewalk(pagetable_t pagetable)
+   kfree((void *)pagetable);
+ }
+ 
++void
++vmprint_recursive(pagetable_t pagetable, int depth)
++{
++  for(int i = 0; i < 512; i++){
++    pte_t pte = pagetable[i];
++    if((pte & PTE_V) == 0)
++      continue;
++    for(int d = 0; d <= depth; d++){
++      printk("..");
++      if(d < depth)
++        printk(" ");
++    }
++    printk("%d: pte %p pa %p\n", i, (void*)pte, (void*)PTE2PA(pte));
++    if((pte & (PTE_R|PTE_W|PTE_X)) == 0){
++      vmprint_recursive((pagetable_t)PTE2PA(pte), depth + 1);
++    }
++  }
++}
++
++void
++vmprint(pagetable_t pagetable)
++{
++  printk("page table %p\n", pagetable);
++  vmprint_recursive(pagetable, 0);
++}
++
+ // Free user memory pages,
+ // then free page-table pages.
+ void
